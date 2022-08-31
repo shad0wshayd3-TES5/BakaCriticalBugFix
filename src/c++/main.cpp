@@ -1,3 +1,56 @@
+namespace ObScript
+{
+	class QuitGame
+	{
+	public:
+		static void Install()
+		{
+			if (auto function = RE::SCRIPT_FUNCTION::LocateConsoleCommand(LONG_NAME))
+			{
+				if (IsInModule(reinterpret_cast<std::uintptr_t>(function->executeFunction)))
+				{
+					function->executeFunction = Execute;
+
+					logger::info(FMT_STRING("Registered function {:s}"sv), LONG_NAME);
+				}
+				else
+				{
+					logger::error(FMT_STRING("{:s} function is already overridden!"sv), LONG_NAME);
+				}
+			}
+			else
+			{
+				logger::error(FMT_STRING("Failed to locate function {:s}."sv), LONG_NAME);
+			}
+		}
+
+	private:
+		static bool IsInModule(std::uintptr_t a_ptr)
+		{
+			auto& mod = REL::Module::get();
+			auto seg = mod.segment(REL::Segment::textx);
+			auto end = seg.address() + seg.size();
+			return (seg.address() < a_ptr) && (a_ptr < end);
+		}
+
+		static bool Execute(const RE::SCRIPT_PARAMETER*, RE::SCRIPT_FUNCTION::ScriptData*, RE::TESObjectREFR*, RE::TESObjectREFR*, RE::Script*, RE::ScriptLocals*, double&, std::uint32_t&)
+		{
+			std::thread{
+				[]
+				{
+					RE::ConsoleLog::GetSingleton()->Print("Bye.");
+					std::this_thread::sleep_for(std::chrono::milliseconds(100));
+					RE::Main::GetSingleton()->quitGame = true;
+				}
+			}.detach();
+
+			return true;
+		}
+
+		inline static constexpr std::string_view LONG_NAME{ "QuitGame"sv };
+	};
+}
+
 #ifdef SKYRIM_AE
 extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []()
 {
@@ -65,6 +118,8 @@ extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_s
 	logger::info(FMT_STRING("{:s} loaded"), Version::PROJECT);
 
 	SKSE::Init(a_skse);
+
+	ObScript::QuitGame::Install();
 
 	return true;
 }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
-set(NAME "BakaPluginTemplate")
-set(VERSION 1.0.0)
+set(NAME "CRITICALBUGFIX")
+set(VERSION 2.0.0)
 set(AE_VERSION 1)
 
 # ---- Options ----

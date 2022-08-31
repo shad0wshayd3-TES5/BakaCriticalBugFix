@@ -1,6 +1,5 @@
 {
-  "name": "bakaplugintemplate",
-  "version-string": "1.0.0",
+  "name": "criticalbugfix",
   "license": "MIT",
   "dependencies": [
     "boost-stl-interfaces",
