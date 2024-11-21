@@ -1,30 +1,9 @@
 namespace ObScript
 {
-	class QuitGame
+	namespace QuitGame
 	{
-	public:
-		static void Install()
-		{
-			if (auto function = RE::SCRIPT_FUNCTION::LocateConsoleCommand(LONG_NAME))
-			{
-				if (IsInModule(reinterpret_cast<std::uintptr_t>(function->executeFunction)))
-				{
-					function->executeFunction = Execute;
+		inline static constexpr auto LONG_NAME{ "QuitGame"sv };
 
-					logger::info(FMT_STRING("Registered function {:s}"sv), LONG_NAME);
-				}
-				else
-				{
-					logger::error(FMT_STRING("{:s} function is already overridden!"sv), LONG_NAME);
-				}
-			}
-			else
-			{
-				logger::error(FMT_STRING("Failed to locate function {:s}."sv), LONG_NAME);
-			}
-		}
-
-	private:
 		static bool IsInModule(std::uintptr_t a_ptr)
 		{
 			auto& mod = REL::Module::get();
@@ -47,80 +26,54 @@ namespace ObScript
 			return true;
 		}
 
-		inline static constexpr std::string_view LONG_NAME{ "QuitGame"sv };
-	};
-}
-
-#ifdef SKYRIM_AE
-extern "C" DLLEXPORT constinit auto SKSEPlugin_Version = []()
-{
-	SKSE::PluginVersionData v;
-	v.PluginVersion(Version::MAJOR);
-	v.PluginName(Version::PROJECT);
-	v.AuthorName("shad0wshayd3");
-	v.UsesAddressLibrary();
-	v.UsesUpdatedStructs();
-	v.CompatibleVersions({ SKSE::RUNTIME_LATEST });
-
-	return v;
-}();
-#else
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Query(const SKSE::QueryInterface* a_skse, SKSE::PluginInfo* a_info)
-{
-	a_info->infoVersion = SKSE::PluginInfo::kVersion;
-	a_info->name = Version::PROJECT.data();
-	a_info->version = Version::MAJOR;
-
-	if (a_skse->IsEditor())
-	{
-		logger::critical("Loaded in editor, marking as incompatible"sv);
-		return false;
+		static void Install()
+		{
+			if (auto function = RE::SCRIPT_FUNCTION::LocateConsoleCommand(LONG_NAME))
+			{
+				if (IsInModule(reinterpret_cast<std::uintptr_t>(function->executeFunction)))
+				{
+					function->executeFunction = Execute;
+					SKSE::log::info("Registered function {:s}"sv, LONG_NAME);
+				}
+				else
+				{
+					SKSE::log::warn("{:s} function is already overridden!"sv, LONG_NAME);
+				}
+			}
+			else
+			{
+				SKSE::log::error("Failed to locate function {:s}."sv, LONG_NAME);
+			}
+		}
 	}
 
-	const auto ver = a_skse->RuntimeVersion();
-	if (ver < SKSE::RUNTIME_1_5_39)
+	static void Install()
 	{
-		logger::critical(FMT_STRING("Unsupported runtime version {}"sv), ver.string());
-		return false;
+		QuitGame::Install();
 	}
-
-	return true;
 }
-#endif
 
 namespace
 {
-	void InitializeLog()
+	static void MessageCallback(SKSE::MessagingInterface::Message* a_msg)
 	{
-		auto path = logger::log_directory();
-		if (!path)
+		switch (a_msg->type)
 		{
-			stl::report_and_fail("Failed to find standard logging directory"sv);
+		case SKSE::MessagingInterface::kPostLoad:
+		{
+			ObScript::Install();
+			break;
 		}
-
-		*path /= fmt::format(FMT_STRING("{}.log"), Version::PROJECT);
-		auto sink = std::make_shared<spdlog::sinks::basic_file_sink_mt>(path->string(), true);
-
-		auto log = std::make_shared<spdlog::logger>("global log"s, std::move(sink));
-
-		log->set_level(spdlog::level::info);
-		log->flush_on(spdlog::level::info);
-
-		spdlog::set_default_logger(std::move(log));
-		spdlog::set_pattern("[%^%l%$] %v"s);
-
-		logger::info(FMT_STRING("{:s} v{:s}"), Version::PROJECT, Version::NAME);
+		default:
+			break;
+		}
 	}
 }
 
-extern "C" DLLEXPORT bool SKSEAPI SKSEPlugin_Load(const SKSE::LoadInterface* a_skse)
+SKSEPluginLoad(const SKSE::LoadInterface* a_skse)
 {
-	InitializeLog();
-	logger::info(FMT_STRING("{:s} loaded"), Version::PROJECT);
-
 	SKSE::Init(a_skse);
-
-	ObScript::QuitGame::Install();
+	SKSE::GetMessagingInterface()->RegisterListener(MessageCallback);
 
 	return true;
 }
