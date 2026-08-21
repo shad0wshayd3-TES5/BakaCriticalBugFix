@@ -1,43 +1,25 @@
--- set xmake version
-set_xmakever("2.9.4")
+-- include subprojects
+includes("lib/commonlibsse")
 
--- include local folders
-includes("extern/commonlibsse")
-
--- set project
+-- set project constants
 set_project("CRITICALBUGFIX")
-set_version("3.0.0")
+set_version("4.0.0")
 set_license("GPL-3.0")
-
--- set defaults
-set_arch("x64")
 set_languages("c++23")
-set_optimize("faster")
-set_warnings("allextra", "error")
-set_defaultmode("releasedbg")
+set_warnings("allextra")
 
--- enable lto
-set_policy("build.optimization.lto", true)
-
--- add rules
+-- add common rules
 add_rules("mode.debug", "mode.releasedbg")
 add_rules("plugin.vsxmake.autoupdate")
 
--- add config
-set_config("skyrim_ae", true)
-
--- setup targets
+-- define targets
 target("CRITICALBUGFIX")
-    -- bind local dependencies
-    add_deps("commonlibsse")
-
-    -- add commonlibsse plugin
     add_rules("commonlibsse.plugin", {
         name = "CRITICALBUGFIX",
         author = "shad0wshayd3"
     })
 
-    -- add source files
+    -- add src files
     add_files("src/**.cpp")
     add_headerfiles("src/**.h")
     add_includedirs("src")
